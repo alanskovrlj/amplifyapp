@@ -4,7 +4,7 @@ import "./App.css";
 import { withAuthenticator} from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
 import { useEffect, useState } from "react";
-import Amplify, { API, graphqlOperation } from "aws-amplify";
+import { Amplify,API, graphqlOperation,Storage } from "aws-amplify";
 import { createTodo } from "./graphql/mutations";
 import { listTodos } from "./graphql/queries";
 
@@ -18,6 +18,8 @@ const initialState = { name: "", description: "" };
 function App({signOut, user}) {
   const [formState, setFormState] = useState(initialState);
   const [todos, setTodos] = useState([]);
+  const [images,setImages] = useState([])
+
 
   useEffect(() => {
     fetchTodos();
@@ -31,6 +33,16 @@ function App({signOut, user}) {
       try {
         const todoData = await API.graphql(graphqlOperation(listTodos));
         const todos = todoData.data.listTodos.items;
+
+        await Promise.all(
+          todos.map(async (todo) => {
+            if (todo.image) {
+              const image = await Storage.get(todo.image);
+              todo.image = image;
+            }
+            return todo;
+          })
+        );
         setTodos(todos);
       } catch (err) {
         console.log("error fetching todos");
@@ -39,7 +51,13 @@ function App({signOut, user}) {
 
     async function addTodo() {
       try {
+        console.log(todos);
         if (!formState.name || !formState.description) return;
+        console.log("asd",formState);
+        if (formState.image) {
+          const img = await Storage.get(formState.image);
+          formState.image = img;
+        }
         const todo = { ...formState };
         setTodos([...todos, todo]);
         setFormState(initialState);
@@ -49,33 +67,57 @@ function App({signOut, user}) {
       }
     }
 
+  /*   async function fetchImages(){
+      let imageKeys = await Storage.list('');
+      console.log(imageKeys);
+      imageKeys = await Promise.all(imageKeys.map(async k => {
+        const signedUrl = await Storage.get(k.key)
+        return signedUrl;
+      }))
+      console.log(imageKeys);
+      setImages(imageKeys);
+    } */
 
+  async function onChange(e) {
+    if (!e.target.files[0]) return;
+    const file = e.target.files[0];
+    console.log(file.name);
+    setFormState({ ...formState, image: file.name });
+
+    await Storage.put(file.name, file);
+    fetchTodos();
+}
   return (
     <div className="App">
-        <div style={styles.container}>
-          <h2>Amplify Todos</h2>
-          <input
-            onChange={(event) => setInput("name", event.target.value)}
-            style={styles.input}
-            value={formState.name}
-            placeholder="Name"
-          />
-          <input
-            onChange={(event) => setInput("description", event.target.value)}
-            style={styles.input}
-            value={formState.description}
-            placeholder="Description"
-          />
-          <button style={styles.button} onClick={addTodo}>
-            Create Todo
-          </button>
-          {todos.map((todo, index) => (
-            <div key={todo.id ? todo.id : index} style={styles.todo}>
-              <p style={styles.todoName}>{todo.name}</p>
-              <p style={styles.todoDescription}>{todo.description}</p>
-            </div>
-          ))}
-        </div>
+      <div style={styles.container}>
+        <h2>Amplify Todos</h2>
+        <input
+          onChange={(event) => setInput("name", event.target.value)}
+          style={styles.input}
+          value={formState.name}
+          placeholder="Name"
+        />
+        <input
+          onChange={(event) => setInput("description", event.target.value)}
+          style={styles.input}
+          value={formState.description}
+          placeholder="Description"
+        />
+        <input type="file" onChange={onChange} />
+        <button style={styles.button} onClick={addTodo}>
+          Create Todo
+        </button>
+        {images.map((img) => {
+          return <img src={img} key={img}></img>;
+        })}
+        {todos.map((todo, index) => (
+          <div key={todo.id ? todo.id : index} style={styles.todo}>
+            <p style={styles.todoName}>{todo.name}</p>
+            <p style={styles.todoDescription}>{todo.description}</p>
+            {todo.image && <img src={todo.image} key={todo.image} style={styles.img}></img>}
+          </div>
+        ))}
+      </div>
       <button onClick={signOut}>Sign out</button>
     </div>
   );
@@ -89,6 +131,9 @@ const styles = {
     flexDirection: "column",
     justifyContent: "center",
     padding: 20,
+  },
+  img:{
+    maxWidth: "400px",
   },
   todo: { marginBottom: 15 },
   input: {
