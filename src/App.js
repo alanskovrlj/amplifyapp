@@ -5,8 +5,8 @@ import { withAuthenticator} from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
 import { useEffect, useState } from "react";
 import { Amplify,API, graphqlOperation,Storage } from "aws-amplify";
-import { createTodo } from "./graphql/mutations";
-import { listTodos } from "./graphql/queries";
+import { createNote } from "./graphql/mutations";
+import { listNotes } from "./graphql/queries";
 
 
 import awsExports from "./aws-exports";
@@ -31,18 +31,19 @@ function App({signOut, user}) {
 
     async function fetchTodos() {
       try {
-        const todoData = await API.graphql(graphqlOperation(listTodos));
-        const todos = todoData.data.listTodos.items;
-
-        await Promise.all(
+        const todoData = await API.graphql(graphqlOperation(listNotes));
+        const todos = todoData.data.listNotes.items;
+ 
+        /* await Promise.all(
           todos.map(async (todo) => {
             if (todo.image) {
               const image = await Storage.get(todo.image);
+              console.log(image,"asdadsa");
               todo.image = image;
             }
             return todo;
           })
-        );
+        ); */
         setTodos(todos);
       } catch (err) {
         console.log("error fetching todos");
@@ -53,15 +54,19 @@ function App({signOut, user}) {
       try {
         console.log(todos);
         if (!formState.name || !formState.description) return;
-        console.log("asd",formState);
+        
+        await API.graphql(graphqlOperation(createNote, { input: formState }));
         if (formState.image) {
+          console.log("-1",formState.image);
           const img = await Storage.get(formState.image);
           formState.image = img;
         }
+        console.log("1",formState);
         const todo = { ...formState };
+        console.log("2", todo);
+
         setTodos([...todos, todo]);
         setFormState(initialState);
-        await API.graphql(graphqlOperation(createTodo, { input: todo }));
       } catch (err) {
         console.log("error creating todo:", err);
       }
@@ -81,10 +86,12 @@ function App({signOut, user}) {
   async function onChange(e) {
     if (!e.target.files[0]) return;
     const file = e.target.files[0];
-    console.log(file.name);
+    console.log(file.name,"lagalaglaglag");
     setFormState({ ...formState, image: file.name });
 
-    await Storage.put(file.name, file);
+    const rez = await Storage.put(file.name, file);
+    console.log("brrrrr",rez);
+    console.log("brate",Storage.get(rez));
     fetchTodos();
 }
   return (
@@ -103,13 +110,11 @@ function App({signOut, user}) {
           value={formState.description}
           placeholder="Description"
         />
-        <input type="file" onChange={onChange} />
+        <input type="file" onChange={onChange} style={styles.moj}/>
         <button style={styles.button} onClick={addTodo}>
           Create Todo
         </button>
-        {images.map((img) => {
-          return <img src={img} key={img}></img>;
-        })}
+        
         {todos.map((todo, index) => (
           <div key={todo.id ? todo.id : index} style={styles.todo}>
             <p style={styles.todoName}>{todo.name}</p>
@@ -132,12 +137,15 @@ const styles = {
     justifyContent: "center",
     padding: 20,
   },
-  img:{
-    maxWidth: "400px",
+  img: {
+   width: "px",
   },
-  todo: { marginBottom: 15 },
+  moj: {
+    outline: "none",
+    height: "80px",
+  },
+  todo: { marginBottom: 15, border: "1px solid black" },
   input: {
-    border: "none",
     backgroundColor: "#ddd",
     marginBottom: 10,
     padding: 8,
