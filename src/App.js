@@ -5,7 +5,7 @@ import { withAuthenticator} from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
 import { useEffect, useState } from "react";
 import { Amplify,API, graphqlOperation,Storage } from "aws-amplify";
-import { createNote } from "./graphql/mutations";
+import { createNote,deleteNote as deleteNoteMutation } from "./graphql/mutations";
 import { listNotes } from "./graphql/queries";
 
 
@@ -59,7 +59,8 @@ function App({signOut, user}) {
           formState.image = img;
         }
         const todo = { ...formState };
-
+        
+        fetchTodos()
         setTodos([...todos, todo]);
         setFormState(initialState);
       } catch (err) {
@@ -78,12 +79,21 @@ function App({signOut, user}) {
       setImages(imageKeys);
     } */
 
+    async function deleteNote({ id }) {
+      console.log(todos,id);
+      if(!id) return
+      const newNotesArray = todos.filter(note => note.id !== id);
+      setTodos(newNotesArray);
+     await API.graphql( {query: deleteNoteMutation, variables: {input: {id}}}); 
+
+    }
+
   async function onChange(e) {
     if (!e.target.files[0]) return;
     const file = e.target.files[0];
     setFormState({ ...formState, image: file.name });
-
     const rez = await Storage.put(file.name, file);
+    
 }
   return (
     <div className="App">
@@ -111,6 +121,8 @@ function App({signOut, user}) {
             <p style={styles.todoName}>{todo.name}</p>
             <p style={styles.todoDescription}>{todo.description}</p>
             {todo.image && <img src={todo.image} key={todo.image} style={styles.img}></img>}
+            
+            <button onClick={() => deleteNote(todo)}>Delete note</button>
           </div>
         ))}
       </div>
