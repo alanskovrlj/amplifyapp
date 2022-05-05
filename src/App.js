@@ -22,48 +22,43 @@ function App({signOut, user}) {
 
 
   useEffect(() => {
-    fetchTodos();
+     fetchTodos(); 
   }, []);
 
   function setInput(key, value) {
     setFormState({ ...formState, [key]: value });
   }
 
-    async function fetchTodos() {
+     async function fetchTodos() {
       try {
         const todoData = await API.graphql(graphqlOperation(listNotes));
         const todos = todoData.data.listNotes.items;
  
-        /* await Promise.all(
+         await Promise.all(
           todos.map(async (todo) => {
             if (todo.image) {
               const image = await Storage.get(todo.image);
-              console.log(image,"asdadsa");
               todo.image = image;
             }
             return todo;
           })
-        ); */
+        ); 
         setTodos(todos);
       } catch (err) {
         console.log("error fetching todos");
       }
-    }
+    } 
 
     async function addTodo() {
       try {
-        console.log(todos);
         if (!formState.name || !formState.description) return;
         
         await API.graphql(graphqlOperation(createNote, { input: formState }));
         if (formState.image) {
-          console.log("-1",formState.image);
           const img = await Storage.get(formState.image);
           formState.image = img;
         }
-        console.log("1",formState);
         const todo = { ...formState };
-        console.log("2", todo);
 
         setTodos([...todos, todo]);
         setFormState(initialState);
@@ -86,13 +81,9 @@ function App({signOut, user}) {
   async function onChange(e) {
     if (!e.target.files[0]) return;
     const file = e.target.files[0];
-    console.log(file.name,"lagalaglaglag");
     setFormState({ ...formState, image: file.name });
 
     const rez = await Storage.put(file.name, file);
-    console.log("brrrrr",rez);
-    console.log("brate",Storage.get(rez));
-    fetchTodos();
 }
   return (
     <div className="App">
