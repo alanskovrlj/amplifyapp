@@ -3,27 +3,77 @@ import logo from "./logo.svg";
 import "./App.css";
 import { withAuthenticator} from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
-import { useEffect, useState } from "react";
-import { Amplify,API, graphqlOperation,Storage } from "aws-amplify";
+import { useEffect, useState, useContext } from "react";
+import { Auth,Hub,Logger,Amplify,API, graphqlOperation,Storage } from "aws-amplify";
 import { createNote,deleteNote as deleteNoteMutation } from "./graphql/mutations";
 import { listNotes } from "./graphql/queries";
-
-
 import awsExports from "./aws-exports";
+import "./styles/theme.scss";
+import { createContext } from "react";
+import SignIn from "./sign-in.js";
+import SignUp from "./sign-up.js"
+import AuthCode from "./AuthCode.js"
+
+
 Amplify.configure(awsExports);
 
 
 const initialState = { name: "", description: "" };
+const initialLoginState = {
+  username: '',
+  password: '',
+  email: '',
+  authCode: '',
+  formType: 'signUp'
+}
 
-function App({signOut, user}) {
+export const LoginContext = createContext("da");
+
+
+function App({signOut, userAuto}) {
+
   const [formState, setFormState] = useState(initialState);
   const [todos, setTodos] = useState([]);
   const [images,setImages] = useState([])
+  const [loginState, updateLoginState] = useState(initialLoginState);
+  const [user,updateUser] = useState(null)
 
 
   useEffect(() => {
      fetchTodos(); 
+     checkUser();
+     setAuthListener();
   }, []);
+
+  async function setAuthListener() {
+   
+const logger = new Logger("My-Logger");
+
+const listener = (data) => {
+  switch (data.payload.event) {
+    case "signOut":
+      logger.info("user signed out");
+      console.log(data);
+      updateLoginState({...loginState, formType: "signIn"})
+      break;
+    default:
+  }
+};
+
+Hub.listen("auth", listener);
+  }
+  
+
+  async function checkUser() {
+    try {
+      const user = await Auth.currentAuthenticatedUser()
+      console.log("user",user)
+      updateUser(user)
+      updateLoginState({...loginState,formType:"signedIn"})
+    } catch (err) {
+
+    }
+  }
 
   function setInput(key, value) {
     setFormState({ ...formState, [key]: value });
@@ -68,17 +118,6 @@ function App({signOut, user}) {
       }
     }
 
-  /*   async function fetchImages(){
-      let imageKeys = await Storage.list('');
-      console.log(imageKeys);
-      imageKeys = await Promise.all(imageKeys.map(async k => {
-        const signedUrl = await Storage.get(k.key)
-        return signedUrl;
-      }))
-      console.log(imageKeys);
-      setImages(imageKeys);
-    } */
-
     async function deleteNote({ id }) {
       console.log(todos,id);
       if(!id) return
@@ -93,11 +132,144 @@ function App({signOut, user}) {
     const file = e.target.files[0];
     setFormState({ ...formState, image: file.name });
     const rez = await Storage.put(file.name, file);
+  }
+
+  function handleLoginChange(e){
+    e.preventDefault();
+    console.log(e.target.value);
+     updateLoginState(()=>{
+      return {...loginState, [e.target.name]: e.target.value}
+    })
     
-}
+  }
+
+  const {formType} = loginState;
+
+  async function signUp (e) {
+    console.log("hmmm");
+    const { username, email, password } = loginState;
+    await Auth.signUp({username, password, attributes: {email}})
+    updateLoginState(() => ({ ...loginState, formType: "confirmSignUp" }));
+  }
+  async function confirmSignUp(e) {
+    const { username, authCode } = loginState;
+    console.log(authCode);
+    await Auth.confirmSignUp( username, authCode);
+    updateLoginState(() => ({ ...loginState, formType: "signIn" }));
+  }
+  async function signIn(e) {
+    const { username, password } = loginState;
+    await Auth.signIn({ username, password });
+    updateLoginState(() => ({ ...loginState, formType: "signedIn" }));
+  }
   return (
     <div className="App">
-      <div style={styles.container}>
+      {/*CUSTOM AUTHENTICAITON FLOW*/}
+      <LoginContext.Provider
+        value={{
+          handleLoginChange,
+          signUp,
+          updateLoginState,
+          loginState,
+          confirmSignUp,
+        }}
+      >
+        {formType === "signUp" && <SignUp></SignUp>}
+        {formType === "signIn" && <SignIn></SignIn>}
+        {formType === "confirmSignUp" && <AuthCode></AuthCode>}
+        {formType === "signedIn" && (
+          <div>
+            <h1>Hello world</h1>
+            <button
+              onClick={() => {
+                Auth.signOut();
+              }}
+            >
+              Sign Out
+            </button>
+          </div>
+        )}
+      </LoginContext.Provider>
+
+
+
+      {/* {formType === "signUp" && (
+        <div>
+          Sign up
+          <input
+            name="username"
+            onChange={handleLoginChange}
+            placeholder="username"
+          />
+          <input
+            name="password"
+            type="password"
+            onChange={handleLoginChange}
+            placeholder="password"
+          />
+          <input type="email" name="email" onChange={handleLoginChange} />
+          <button onClick={signUp}>Sign up</button>
+          <button
+            onClick={() => {
+              updateLoginState({ ...loginState, formType: "signIn" });
+            }}
+          >
+            Sign in
+          </button>
+        </div>
+      )}
+      {formType === "confirmSignUp" && (
+        <div>
+          Confirm sign up
+          <input
+            name="authCode"
+            onChange={handleLoginChange}
+            placeholder="Confirmation Code"
+          />
+          <button onClick={confirmSignUp}>Confirm Sign up</button>
+        </div>
+      )}
+      {formType === "signIn" && (
+        <div>
+          Sign in
+          <input
+            name="username"
+            onChange={handleLoginChange}
+            placeholder="username"
+          />
+          <input
+            name="password"
+            type="password"
+            onChange={handleLoginChange}
+            placeholder="password"
+          />
+          <button onClick={signIn}>Sign In</button>
+          <button
+            onClick={() => {
+              updateLoginState({ ...loginState, formType: "signUp" });
+            }}
+          >
+            Create Account
+          </button>
+        </div>
+      )}
+      {formType === "signedIn" && (
+        <div>
+          <h1>Hello world</h1>
+          <button
+            onClick={() => {
+              Auth.signOut();
+            }}
+          >
+            Sign Out
+          </button>
+        </div>
+      )} */}
+
+
+
+
+      {/* <div style={styles.container}>
         <h2>Amplify Todos</h2>
         <input
           onChange={(event) => setInput("name", event.target.value)}
@@ -126,7 +298,7 @@ function App({signOut, user}) {
           </div>
         ))}
       </div>
-      <button onClick={signOut}>Sign out</button>
+      <button onClick={signOut}>Sign out</button> */}
     </div>
   );
 }
@@ -165,4 +337,4 @@ const styles = {
   },
 };
 
-export default withAuthenticator(App);
+export default App;
