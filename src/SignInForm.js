@@ -44,7 +44,11 @@ export default function SignInForm() {
             </InputGroup.Text>
           </InputGroup>
         </div>
-        <Button size="lg" className="w-100 mb-3" onClick={signIn}>
+        <Button size="lg" className="w-100 mb-3" onClick={()=>{
+          
+    console.log("yeeep");
+    signIn();
+        }}>
           Sign in
         </Button>
         <p className="text-center">

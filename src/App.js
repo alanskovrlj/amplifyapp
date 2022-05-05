@@ -158,6 +158,7 @@ Hub.listen("auth", listener);
     updateLoginState(() => ({ ...loginState, formType: "signIn" }));
   }
   async function signIn(e) {
+    console.log("yeeep");
     const { username, password } = loginState;
     await Auth.signIn({ username, password });
     updateLoginState(() => ({ ...loginState, formType: "signedIn" }));
@@ -169,6 +170,7 @@ Hub.listen("auth", listener);
         value={{
           handleLoginChange,
           signUp,
+          signIn,
           updateLoginState,
           loginState,
           confirmSignUp,
