@@ -6,7 +6,7 @@ import { LoginContext } from "./App";
 
 export default function SignInForm() {
   const { handleLoginChange, confirmSignUp, updateLoginState, loginState } =
-    useContext(LoginContext);
+  useContext(LoginContext);
   console.log("val", updateLoginState);
 
   return (

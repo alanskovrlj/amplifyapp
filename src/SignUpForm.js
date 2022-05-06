@@ -69,7 +69,7 @@ export default function SignUpForm() {
               }}
               style={{ cursor: "pointer" }}
             >
-              Sign Up
+              Sign In
             </a>
             .
           </small>

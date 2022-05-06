@@ -13,7 +13,10 @@ import { createContext } from "react";
 import SignIn from "./sign-in.js";
 import SignUp from "./sign-up.js"
 import AuthCode from "./AuthCode.js"
-
+import { Routes, Route, Link } from "react-router-dom";
+import Files from "./Files"
+import files from "./data/files"
+import ProjectFiles from "./project-files";
 
 Amplify.configure(awsExports);
 
@@ -123,8 +126,7 @@ Hub.listen("auth", listener);
       if(!id) return
       const newNotesArray = todos.filter(note => note.id !== id);
       setTodos(newNotesArray);
-     await API.graphql( {query: deleteNoteMutation, variables: {input: {id}}}); 
-
+      await API.graphql( {query: deleteNoteMutation, variables: {input: {id}}}); 
     }
 
   async function onChange(e) {
@@ -140,7 +142,6 @@ Hub.listen("auth", listener);
      updateLoginState(()=>{
       return {...loginState, [e.target.name]: e.target.value}
     })
-    
   }
 
   const {formType} = loginState;
@@ -165,6 +166,8 @@ Hub.listen("auth", listener);
   }
   return (
     <div className="App">
+      <ProjectFiles ></ProjectFiles>
+      <Routes></Routes>
       {/*CUSTOM AUTHENTICAITON FLOW*/}
       <LoginContext.Provider
         value={{
@@ -192,84 +195,6 @@ Hub.listen("auth", listener);
           </div>
         )}
       </LoginContext.Provider>
-
-
-
-      {/* {formType === "signUp" && (
-        <div>
-          Sign up
-          <input
-            name="username"
-            onChange={handleLoginChange}
-            placeholder="username"
-          />
-          <input
-            name="password"
-            type="password"
-            onChange={handleLoginChange}
-            placeholder="password"
-          />
-          <input type="email" name="email" onChange={handleLoginChange} />
-          <button onClick={signUp}>Sign up</button>
-          <button
-            onClick={() => {
-              updateLoginState({ ...loginState, formType: "signIn" });
-            }}
-          >
-            Sign in
-          </button>
-        </div>
-      )}
-      {formType === "confirmSignUp" && (
-        <div>
-          Confirm sign up
-          <input
-            name="authCode"
-            onChange={handleLoginChange}
-            placeholder="Confirmation Code"
-          />
-          <button onClick={confirmSignUp}>Confirm Sign up</button>
-        </div>
-      )}
-      {formType === "signIn" && (
-        <div>
-          Sign in
-          <input
-            name="username"
-            onChange={handleLoginChange}
-            placeholder="username"
-          />
-          <input
-            name="password"
-            type="password"
-            onChange={handleLoginChange}
-            placeholder="password"
-          />
-          <button onClick={signIn}>Sign In</button>
-          <button
-            onClick={() => {
-              updateLoginState({ ...loginState, formType: "signUp" });
-            }}
-          >
-            Create Account
-          </button>
-        </div>
-      )}
-      {formType === "signedIn" && (
-        <div>
-          <h1>Hello world</h1>
-          <button
-            onClick={() => {
-              Auth.signOut();
-            }}
-          >
-            Sign Out
-          </button>
-        </div>
-      )} */}
-
-
-
 
       {/* <div style={styles.container}>
         <h2>Amplify Todos</h2>
